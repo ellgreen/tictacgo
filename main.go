@@ -7,19 +7,19 @@ import (
 func main() {
 	var board Board
 
-	board.State = [9]rune{'X', 'O', 'X', 'O', 0, 'O', 'X', 'X', 'X'}
-	// board.State = [9]rune{0, 'O', 0, 'O', 'X', 'O', 'X', 'O', 'X'}
-	// board.Play(4, 'X')
+	// board.State = [9]rune{'X', 'O', 'X', 'O', 0, 'O', 'X', 'X', 'X'}
+	// // board.State = [9]rune{0, 'O', 0, 'O', 'X', 'O', 'X', 'O', 'X'}
+	// // board.Play(4, 'X')
 
-	// for i := 0; i < 9; i++ {
-	// 	turn := 'X'
+	for i := 0; i < 9; i++ {
+		turn := 'X'
 
-	// 	if i%2 == 0 {
-	// 		turn = 'O'
-	// 	}
+		if i%2 == 0 {
+			turn = 'O'
+		}
 
-	// 	board.Play(board.BestMove(turn), turn)
-	// }
+		board.Play(board.BestMove(turn), turn)
+	}
 
 	board.Render()
 
@@ -107,10 +107,44 @@ func (b *Board) Winner() (rune, bool) {
 func (b *Board) BestMove(turn rune) int {
 	moves := b.AvailablesMoves()
 	var bestMove int
+	var bestScore float32 = 0
 
 	for move := range moves {
-		bestMove = move
+		score := b.MiniMaxScore(turn, turn)
+
+		if score > bestScore {
+			bestMove = move
+		}
 	}
 
 	return bestMove
+}
+
+func (b *Board) MiniMaxScore(maximiser rune, turn rune) float32 {
+	if winner, ok := b.Winner(); ok {
+		if winner == maximiser {
+			return 1
+		}
+
+		return 0
+	}
+
+	moves := b.AvailablesMoves()
+	var totalScore float32 = 0
+
+	for move := range moves {
+		board := *b
+
+		board.Play(move, turn)
+
+		nextTurn := 'X'
+
+		if turn == 'X' {
+			nextTurn = 'O'
+		}
+
+		totalScore += board.MiniMaxScore(maximiser, nextTurn)
+	}
+
+	return totalScore / float32(len(moves))
 }
