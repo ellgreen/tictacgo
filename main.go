@@ -1,150 +1,77 @@
 package main
 
 import (
+	"bufio"
 	"fmt"
+	"os"
+	"strconv"
+	"strings"
 )
 
+const AIBattle = false
+
 func main() {
+	if !AIBattle {
+		PrintExample()
+	}
+
 	var board Board
+	turn := 'X'
 
-	// board.State = [9]rune{'X', 'O', 'X', 'O', 0, 'O', 'X', 'X', 'X'}
-	// // board.State = [9]rune{0, 'O', 0, 'O', 'X', 'O', 'X', 'O', 'X'}
-	// // board.Play(4, 'X')
-
-	for i := 0; i < 9; i++ {
-		turn := 'X'
-
-		if i%2 == 0 {
-			turn = 'O'
+	for i := 0; i <= 9; i++ {
+		if result := board.Check(); result != Incomplete {
+			fmt.Printf("Result: %s\n", HumanResult[result])
+			break
 		}
 
-		board.Play(board.BestMove(turn), turn)
-	}
+		move := board.BestMove(turn)
 
-	board.Render()
-
-	if winner, ok := board.Winner(); ok {
-		fmt.Printf("The winner is %s\n", string(winner))
-		return
-	}
-
-	fmt.Println("There is no winner")
-}
-
-type Board struct {
-	State [9]rune
-}
-
-func (b *Board) Render() {
-	fmt.Println("+-------+")
-
-	for row := 0; row < 3; row++ {
-		fmt.Printf("| ")
-
-		for col := 0; col < 3; col++ {
-			letter := b.State[(3*row)+col]
-
-			if letter == 0 {
-				fmt.Print("  ")
-				continue
-			}
-
-			fmt.Printf("%s ", string(letter))
+		if !AIBattle && turn == 'X' {
+			move = GetInput(board)
 		}
-
-		fmt.Printf("| \n")
-	}
-
-	fmt.Println("+-------+")
-}
-
-func (b *Board) AvailablesMoves() []int {
-	var moves []int
-
-	for i := 0; i < len(b.State); i++ {
-		if b.State[i] == 0 {
-			moves = append(moves, i)
-		}
-	}
-
-	return moves
-}
-
-func (b *Board) Play(position int, letter rune) {
-	b.State[position] = letter
-}
-
-func (b *Board) Winner() (rune, bool) {
-	for i := 0; i < 3; i++ {
-		// Check rows
-		row := b.State[i*3 : (i*3)+3]
-
-		if string(row) == "XXX" {
-			return 'X', true
-		}
-
-		if string(row) == "OOO" {
-			return 'O', true
-		}
-
-		// Check columns
-		col := []rune{b.State[i], b.State[i+3], b.State[i+6]}
-
-		if string(col) == "XXX" {
-			return 'X', true
-		}
-
-		if string(col) == "OOO" {
-			return 'O', true
-		}
-	}
-
-	// TODO: Check diag
-
-	return 0, false
-}
-
-func (b *Board) BestMove(turn rune) int {
-	moves := b.AvailablesMoves()
-	var bestMove int
-	var bestScore float32 = 0
-
-	for move := range moves {
-		score := b.MiniMaxScore(turn, turn)
-
-		if score > bestScore {
-			bestMove = move
-		}
-	}
-
-	return bestMove
-}
-
-func (b *Board) MiniMaxScore(maximiser rune, turn rune) float32 {
-	if winner, ok := b.Winner(); ok {
-		if winner == maximiser {
-			return 1
-		}
-
-		return 0
-	}
-
-	moves := b.AvailablesMoves()
-	var totalScore float32 = 0
-
-	for move := range moves {
-		board := *b
 
 		board.Play(move, turn)
 
-		nextTurn := 'X'
+		board.Render()
 
-		if turn == 'X' {
-			nextTurn = 'O'
+		turn = NextTurn(turn)
+	}
+}
+
+func GetInput(board Board) int {
+	reader := bufio.NewReader(os.Stdin)
+	moves := board.AvailablesMoves()
+
+	for {
+		fmt.Print("Enter move: ")
+		input, err := reader.ReadString('\n')
+
+		if err != nil {
+			panic("Error reading console input")
 		}
 
-		totalScore += board.MiniMaxScore(maximiser, nextTurn)
+		input = strings.Replace(input, "\n", "", -1)
+
+		inputMove, err := strconv.Atoi(input)
+
+		if err != nil {
+			panic("Error turning input move into integer")
+		}
+
+		for _, move := range moves {
+			if inputMove == move {
+				return move
+			}
+		}
+
+		fmt.Printf("Invalid move entered: %d\n", inputMove)
+	}
+}
+
+func PrintExample() {
+	board := Board{
+		State: [9]rune{'0', '1', '2', '3', '4', '5', '6', '7', '8'},
 	}
 
-	return totalScore / float32(len(moves))
+	board.Render()
 }
